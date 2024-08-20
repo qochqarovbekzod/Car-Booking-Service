@@ -2,7 +2,9 @@ package mongo
 
 import (
 	pb "booking/generated/booking"
+	"booking/model"
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -33,22 +35,22 @@ func (b *BookingRepo) CreateBooking(ctx context.Context, in *pb.CreateBookingReq
 	b.Logger.Info("Creating a new booking")
 	collection := b.DB.Collection("bookings")
 
-	created_at := time.Now().Format("2006-01-02T15:04:05Z")
-	updated_at := time.Now().Format("2006-01-02T15:04:05Z")
+	created_at := time.Now().Format("2006/01/02")
+	updated_at := time.Now().Format("2006/01/02")
 	id := uuid.NewString()
 
-	_, err := collection.InsertOne(ctx, bson.M{
-		"_id":            id,
-		"user_id":        in.UserId,
-		"company_name":   in.CompanyName,
-		"description":    in.Description,
-		"services":       in.Services,
-		"availability":   in.Availability,
-		"average_rating": in.AverageRating,
-		"location":       in.Location,
-		"created_at":     created_at,
-		"updated_at":     updated_at,
-		"delete_at":      0,
+	_, err := collection.InsertOne(ctx, bson.D{
+		{Key: "_id", Value: id},
+		{Key: "user_id", Value: in.UserId},
+		{Key: "provider_id", Value: in.ProviderId},
+		{Key: "service_id", Value: in.ServiceId},
+		{Key: "status", Value: in.Status},
+		{Key: "scheduled_time", Value: in.ScheduledTime},
+		{Key: "location", Value: in.Location},
+		{Key: "total_price", Value: in.TotalPrice},
+		{Key: "created_at", Value: created_at},
+		{Key: "updated_at", Value: updated_at},
+		{Key: "deleted_at", Value: 0},
 	})
 
 	if err != nil {
@@ -62,40 +64,53 @@ func (b *BookingRepo) CreateBooking(ctx context.Context, in *pb.CreateBookingReq
 func (b *BookingRepo) GetByIdBooking(ctx context.Context, in *pb.Id) (*pb.Booking, error) {
 	b.Logger.Info("GetById called with id: ")
 	collection := b.DB.Collection("bookings")
-	var booking pb.Booking
-
-	err := collection.FindOne(ctx, bson.M{"_id": in.Id}).Decode(&booking)
-
+	var booking model.Booking
+	var bookings pb.Booking
+	err := collection.FindOne(ctx, bson.D{
+		{Key: "_id", Value: in.Id},
+		{Key: "deleted_at", Value: 0},
+	}).Decode(&booking)
 	if err != nil {
 		b.Logger.Error("Error getting booking by id", err)
 		return nil, err
 	}
 
 	b.Logger.Info(" booking found")
-	return &booking, nil
+	bookings.Id = booking.Id
+	bookings.UserId = booking.UserId
+	bookings.ProviderId = booking.ProviderId
+	bookings.ServiceId = booking.ServiceId
+	bookings.Status = booking.Status
+	bookings.ScheduledTime = booking.ScheduledTime
+	bookings.Location = booking.Location
+	bookings.TotalPrice = booking.TotalPrice
+	bookings.CreatedAt = booking.CreatedAt
+	bookings.UpdatedAt = booking.UpdatedAt
+	return &bookings, nil
 }
 
 func (b BookingRepo) UpdateBooking(ctx context.Context, in *pb.UpdateBookingRequest) (*pb.Booking, error) {
 	b.Logger.Info(" updating booking")
 	collection := b.DB.Collection("bookings")
-	var booking pb.Booking
+	var booking model.Booking
+	var bookings pb.Booking
 
 	filter := bson.M{"$and": []bson.M{
 		{"_id": in.Id},
-		{"delete_at": 0},
+		{"deleted_at": 0},
 	},
 	}
-	updated_at := time.Now().Format("2006-01-02T15:04:05Z")
+	updated_at := time.Now().Format("2006/01/02")
 
 	update := bson.M{
 		"$set": bson.M{
 			"user_id":        in.UserId,
-			"company_name":   in.CompanyName,
-			"description":    in.Description,
-			"services":       in.Services,
-			"availability":   in.Availability,
-			"average_rating": in.AverageRating,
+			"provider_id":    in.ProviderId,
+			"service_id":     in.ServiceId,
+			"status":         in.Status,
+			"scheduled_time": in.ScheduledTime,
 			"location":       in.Location,
+			"total_price":    in.TotalPrice,
 			"updated_at":     updated_at,
 		},
 	}
@@ -106,9 +121,19 @@ func (b BookingRepo) UpdateBooking(ctx context.Context, in *pb.UpdateBookingRequ
 		b.Logger.Error("Error updating booking", err)
 		return nil, err
 	}
+	booking.Id = bookings.Id
+	bookings.UserId = booking.UserId
+	bookings.ProviderId = booking.ProviderId
+	bookings.ServiceId = booking.ServiceId
+	bookings.Status = booking.Status
+	bookings.ScheduledTime = booking.ScheduledTime
+	bookings.Location = booking.Location
+	bookings.TotalPrice = booking.TotalPrice
+	bookings.CreatedAt = booking.CreatedAt
+	bookings.UpdatedAt = updated_at
 
 	b.Logger.Info("booking updated")
-	return &booking, nil
+	return &bookings, nil
 }
 
 func (b BookingRepo) DeleteBooking(ctx context.Context, in *pb.Id) (*pb.Void, error) {
@@ -134,52 +159,51 @@ func (b *BookingRepo) GetAllBookings(ctx context.Context, in *pb.GetAllBookingRe
 
 	findOptions := options.Find()
 	findOptions.SetLimit(in.Limit)
-	findOptions.SetSkip(in.Page)
+	findOptions.SetSkip(in.Page * in.Limit)
 
-	fil := bson.D{}
+	filter := bson.M{}
 
-	if in.CompanyName != "" {
-		fil = append(fil, bson.E{Key: "company_name", Value: in.CompanyName})
+	if in.UserId != "" {
+		filter["user_id"] = in.UserId
 	}
-
-	if in.Description!=""{
-		fil = append(fil, bson.E{Key: "description", Value: in.Description})
+	if in.ProviderId != "" {
+		filter["provide_id"] = in.ProviderId
 	}
-
-	if in.Services!=""{
-        fil = append(fil, bson.E{Key: "services", Value: in.Services})
-    }
-
-	if in.Availability!=""{
-        fil = append(fil, bson.E{Key: "availability", Value: in.Availability})
-    }
-
-	if in.AverageRating!=0{
-        fil = append(fil, bson.E{Key: "average_rating", Value: in.AverageRating})
-    }
-	
-	filter:=bson.M{"$and": fil}
-	if len(fil)==0{
-		filter=bson.M{}
-	} 
-
+	if in.ServiceId != "" {
+		filter["service_id"] = in.ServiceId
+	}
+	if in.Status != "" {
+		filter["status"] = in.Status
+	}
+	if in.TotalPrice != 0 {
+		filter["total_price"] = in.TotalPrice
+	}
 
 	var bookings []*pb.Booking
 
 	rows, err := collection.Find(ctx, filter, findOptions)
 	if err != nil {
+		fmt.Println(err)
 		b.Logger.Error("Error fetching bookings", err)
 		return nil, err
 	}
+	defer rows.Close(ctx)
 
 	for rows.Next(ctx) {
-		var booking *pb.Booking
-		err := rows.Decode(&booking)
+		var bo model.Booking
+		var booking pb.Booking
+		err := rows.Decode(&bo)
 		if err != nil {
 			b.Logger.Error("Error decoding booking", err)
 			return nil, err
 		}
-		bookings = append(bookings, booking)
+		booking = convertToProtoBooking(bo)
+		bookings = append(bookings, &booking)
+	}
+
+	if err := rows.Err(); err != nil {
+		b.Logger.Error("Cursor error", err)
+		return nil, err
 	}
 
 	b.Logger.Info("Bookings retrieved successfully")
@@ -188,4 +212,18 @@ func (b *BookingRepo) GetAllBookings(ctx context.Context, in *pb.GetAllBookingRe
 		Limit:    int32(in.Limit),
 		Page:     int32(in.Page),
 	}, nil
+}
+func convertToProtoBooking(bo model.Booking) pb.Booking {
+	return pb.Booking{
+		Id:            bo.Id,
+		UserId:        bo.UserId,
+		ProviderId:    bo.ProviderId,
+		ServiceId:     bo.ServiceId,
+		Status:        bo.Status,
+		ScheduledTime: bo.ScheduledTime,
+		Location:      bo.Location,
+		TotalPrice:    bo.TotalPrice,
+		CreatedAt:     bo.CreatedAt,
+		UpdatedAt:     bo.UpdatedAt,
+	}
 }

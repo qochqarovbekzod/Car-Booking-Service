@@ -4,6 +4,7 @@ import (
 	pb "booking/generated/booking"
 	"booking/storage"
 	"context"
+	
 	"log/slog"
 )
 
@@ -18,6 +19,7 @@ func NewService(logger *slog.Logger, storage storage.Cars) *Service {
 }
 
 func (s *Service) CreateBooking(ctx context.Context, in *pb.CreateBookingRequest) (*pb.Void, error) {
+
 	s.Logger.Info("CreateBooking called with", "", in)
 	resp, err := s.Storage.Booking().CreateBooking(ctx, in)
 	if err != nil {
@@ -29,6 +31,7 @@ func (s *Service) CreateBooking(ctx context.Context, in *pb.CreateBookingRequest
 }
 
 func (s *Service) GetByIdBooking(ctx context.Context, in *pb.Id) (*pb.Booking, error) {
+
 	s.Logger.Info("GetByIdBooking successful")
 	resp, err := s.Storage.Booking().GetByIdBooking(ctx, in)
 	if err != nil {
@@ -193,26 +196,102 @@ func (s *Service) GetAllReviews(ctx context.Context, in *pb.GetAllReviewsRequest
 	return resp, nil
 }
 
-
 func (s *Service) UpdateReview(ctx context.Context, in *pb.UpadateReviewRequest) (*pb.Review, error) {
 	s.Logger.Info("UpdateReview request received")
-    resp, err := s.Storage.Review().UpdatedReview(ctx, in)
-    if err != nil {
-        s.Logger.Error("UpdateReview failed", err)
-        return nil, err
-    }
-    s.Logger.Info("Review updated successfully")
-    return resp, nil
+	resp, err := s.Storage.Review().UpdatedReview(ctx, in)
+	if err != nil {
+		s.Logger.Error("UpdateReview failed", err)
+		return nil, err
+	}
+	s.Logger.Info("Review updated successfully")
+	return resp, nil
 }
 
 func (s *Service) DeleteReview(ctx context.Context, in *pb.Id) (*pb.Void, error) {
 	s.Logger.Info("DeleteReview request received")
-    resp, err := s.Storage.Review().DeleteReview(ctx, in)
-    if err != nil {
-        s.Logger.Error("DeleteReview failed", err)
-        return nil, err
-    }
-    s.Logger.Info("Review deleted successfully")
-    return resp, nil
+	resp, err := s.Storage.Review().DeleteReview(ctx, in)
+	if err != nil {
+		s.Logger.Error("DeleteReview failed", err)
+		return nil, err
+	}
+	s.Logger.Info("Review deleted successfully")
+	return resp, nil
 }
 
+func (s *Service) CreateProviders(ctx context.Context, in *pb.CreateProvidersRequest) (*pb.Void, error) {
+	s.Logger.Info("CreateProvider request received successfully")
+	resp, err := s.Storage.Provider().CreateProviders(ctx, in)
+	if err != nil {
+		s.Logger.Error("CreateProvider failed", err)
+		return nil, err
+	}
+	s.Logger.Info("Provider created successfully")
+	return resp, nil
+}
+
+func (s *Service) GetByIdProviders(ctx context.Context, in *pb.Id) (*pb.Providers, error) {
+	s.Logger.Info("GetByIdProvider request received")
+	resp, err := s.Storage.Provider().GetByIdProvider(ctx, in.Id)
+	if err != nil {
+		s.Logger.Error("GetByIdProvider failed", err)
+		return nil, err
+	}
+	s.Logger.Info("Provider fetched successfully")
+	return resp, nil
+}
+
+func (s *Service) GetAllProviderss(ctx context.Context, in *pb.GetAllProvidersRequest) (*pb.GetAllProviderssResponse, error) {
+	s.Logger.Info("GetAllProviders successful with params")
+	resp, err := s.Storage.Provider().GetAllProviders(ctx, in)
+	if err != nil {
+		s.Logger.Error("GetAllProviders failed", err)
+		return nil, err
+	}
+	s.Logger.Info("All providers fetched successfully")
+	return resp, nil
+}
+
+func (s *Service) UpdateProviders(ctx context.Context, in *pb.UpdateProvidersRequest) (*pb.Providers, error) {
+	s.Logger.Info("UpdateProvider request received")
+	resp, err := s.Storage.Provider().UpdateProvider(ctx, in)
+	if err != nil {
+		s.Logger.Error("UpdateProvider failed", err)
+		return nil, err
+	}
+	s.Logger.Info("Provider updated successfully")
+	return resp, nil
+}
+
+func (s *Service) DeleteProviders(ctx context.Context, in *pb.Id) (*pb.Void, error) {
+	s.Logger.Info("DeleteProvider request received")
+	resp, err := s.Storage.Provider().DeleteProvider(ctx, in.Id)
+	if err != nil {
+		s.Logger.Error("DeleteProvider failed", err)
+		return nil, err
+	}
+	s.Logger.Info("Provider deleted successfully")
+	return resp, nil
+}
+
+func (s *Service) CreateGet(ctx context.Context, in *pb.Void) (*pb.Service, error) {
+	id, err := s.Storage.BestRepository().GetBestProvider(ctx)
+	if err != nil {
+		s.Logger.Error("Failed to get best provider", err)
+		return nil, err
+	}
+
+	services, err := s.Storage.BestRepository().GetBestProviderWithFilter(ctx, *id)
+	if err != nil {
+		s.Logger.Error("Failed to get services", err)
+		return nil, err
+	}
+
+	s.Logger.Info(" creating service ")
+	resp, err := s.Storage.Best().CreateAndGet(ctx, services)
+	if err != nil {
+		s.Logger.Error("Failed to create service", err)
+		return nil, err
+	}
+	s.Logger.Info("service created successfully")
+	return resp, nil
+}

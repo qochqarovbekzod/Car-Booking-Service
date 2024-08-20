@@ -2,6 +2,7 @@ package mongo
 
 import (
 	pb "booking/generated/booking"
+	"booking/model"
 	"context"
 	"fmt"
 	"log/slog"
@@ -66,7 +67,8 @@ func (r *ReviewRepo) UpdatedReview(ctx context.Context, in *pb.UpadateReviewRequ
 		{"deleted_at": 0},
 	},
 	}
-	var review pb.Review
+	var review model.Review
+	var reviewss pb.Review
 	update := bson.M{"$set": bson.M{
 		"booking_id":  in.BookingId,
 		"user_id":     in.UserId,
@@ -81,8 +83,17 @@ func (r *ReviewRepo) UpdatedReview(ctx context.Context, in *pb.UpadateReviewRequ
 		r.Logger.Error("Error updating review", err)
 		return nil, err
 	}
+	reviewss.Id = review.Id
+	reviewss.BookingId = review.BookingId
+	reviewss.UserId = review.UserId
+	reviewss.ProviderId = review.ProviderId
+	reviewss.Rating = review.Rating
+	reviewss.Comment = review.Comment
+	reviewss.CreatedAt = review.CreatedAt
+	reviewss.UpdatedAt = review.UpdatedAt
+
 	r.Logger.Info("Updated review")
-	return &review, nil
+	return &reviewss, nil
 }
 
 func (r *ReviewRepo) DeleteReview(ctx context.Context, in *pb.Id) (*pb.Void, error) {
@@ -93,7 +104,7 @@ func (r *ReviewRepo) DeleteReview(ctx context.Context, in *pb.Id) (*pb.Void, err
 		{"deleted_at": 0},
 	},
 	}
-	res, err := collection.UpdateOne(ctx, filter, bson.M{"$set":bson.M{"updated_at": time.Now().Unix()}})
+	res, err := collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"deleted_at": time.Now().Unix()}})
 	if err != nil {
 		r.Logger.Error("Error deleting review", err)
 		return nil, err
@@ -103,57 +114,76 @@ func (r *ReviewRepo) DeleteReview(ctx context.Context, in *pb.Id) (*pb.Void, err
 	}
 	return &pb.Void{}, nil
 }
-
 func (r *ReviewRepo) GetAllReviews(ctx context.Context, in *pb.GetAllReviewsRequest) (*pb.GetAllReviewsResponse, error) {
-	r.Logger.Info("GetAllReviews request received")
+	r.Logger.Info("GetAllReviews request received", "request", in)
 	collection := r.DB.Collection("reviews")
 
-	optionsFind := options.Find()
-	optionsFind.SetLimit(int64(in.Limit))
-	optionsFind.SetSkip(in.Page)
+	findOptions := options.Find()
+	findOptions.SetLimit(int64(in.Limit))
+	findOptions.SetSkip(int64(in.Page * int64(in.Limit))) // Ensure pagination logic is correct
 
-	fil := bson.D{}
+	filter := bson.M{"deleted_at": 0} // Default filter for non-deleted reviews
+
 	if in.BookingId != "" {
-		fil = append(fil, bson.E{Key: "booking_id", Value: in.BookingId})
+		filter["booking_id"] = in.BookingId
 	}
 
 	if in.ProviderId != "" {
-		fil = append(fil, bson.E{Key: "provider_id", Value: in.ProviderId})
+		filter["provider_id"] = in.ProviderId
 	}
 
 	if in.Rating != 0 {
-		fil = append(fil, bson.E{Key: "rating", Value: in.Rating})
+		filter["rating"] = in.Rating
 	}
 
 	if in.Comment != "" {
-		fil = append(fil, bson.E{Key: "comment", Value: in.Comment})
+		filter["comment"] = in.Comment
 	}
 
-	filter := bson.M{"$and": fil}
-	if len(fil) == 0 {
-		filter = bson.M{"deleted_at": 0}
-    }
-	cur, err := collection.Find(ctx, filter, optionsFind)
+	var reviews []*pb.Review
+
+	cur, err := collection.Find(ctx, filter, findOptions)
 	if err != nil {
-		r.Logger.Error("Error fetching reviews", err)
+		r.Logger.Error("Error fetching reviews", "error", err)
 		return nil, err
 	}
-	var reviews []*pb.Review
+	defer cur.Close(ctx) 
+	
 	for cur.Next(ctx) {
-		var review pb.Review
+		var review model.Review
 		err := cur.Decode(&review)
 		if err != nil {
-			r.Logger.Error("Error decoding review", err)
+			fmt.Println(err)
+			r.Logger.Error("Error decoding review", "error", err)
 			return nil, err
 		}
-		reviews = append(reviews, &review)
+		reviews = append(reviews, convertToProtoReview(review))
 	}
-	r.Logger.Info("Fetched reviews")
+
+	if err := cur.Err(); err != nil {
+		r.Logger.Error("Cursor error", "error", err)
+		return nil, err
+	}
+
+	r.Logger.Info("Fetched reviews successfully")
 	return &pb.GetAllReviewsResponse{
 		Reviews: reviews,
 		Limit:   in.Limit,
 		Page:    in.Page,
 	}, nil
+}
+
+func convertToProtoReview(review model.Review) *pb.Review {
+	return &pb.Review{
+		Id:         review.Id,
+		BookingId:  review.BookingId,
+		UserId:     review.UserId,
+		ProviderId: review.ProviderId,
+		Rating:     review.Rating,
+		Comment:    review.Comment,
+		CreatedAt:  review.CreatedAt,
+		UpdatedAt:  review.UpdatedAt,
+	}
 }
 
 func (r *ReviewRepo) GetByIdReview(ctx context.Context, in *pb.Id) (*pb.Review, error) {
@@ -165,7 +195,8 @@ func (r *ReviewRepo) GetByIdReview(ctx context.Context, in *pb.Id) (*pb.Review, 
 		{"deleted_at": 0},
 	},
 	}
-	var review pb.Review
+	var review model.Review
+	var reviewss pb.Review
 	err := collection.FindOne(ctx, filter).Decode(&review)
 	if err == mongo.ErrNoDocuments {
 		return nil, fmt.Errorf("review not found")
@@ -173,6 +204,15 @@ func (r *ReviewRepo) GetByIdReview(ctx context.Context, in *pb.Id) (*pb.Review, 
 		r.Logger.Error("Error fetching review", err)
 		return nil, err
 	}
+	reviewss.Id = review.Id
+	reviewss.BookingId = review.BookingId
+	reviewss.UserId = review.UserId
+	reviewss.ProviderId = review.ProviderId
+	reviewss.Rating = review.Rating
+	reviewss.Comment = review.Comment
+	reviewss.CreatedAt = review.CreatedAt
+	reviewss.UpdatedAt = review.UpdatedAt
+
 	r.Logger.Info("Fetched review")
-	return &review, nil
+	return &reviewss, nil
 }

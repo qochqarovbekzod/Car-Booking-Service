@@ -22,6 +22,11 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BookingServiceClient interface {
+	CreateProviders(ctx context.Context, in *CreateProvidersRequest, opts ...grpc.CallOption) (*Void, error)
+	GetByIdProviders(ctx context.Context, in *Id, opts ...grpc.CallOption) (*Providers, error)
+	UpdateProviders(ctx context.Context, in *UpdateProvidersRequest, opts ...grpc.CallOption) (*Providers, error)
+	DeleteProviders(ctx context.Context, in *Id, opts ...grpc.CallOption) (*Void, error)
+	GetAllProviderss(ctx context.Context, in *GetAllProvidersRequest, opts ...grpc.CallOption) (*GetAllProviderssResponse, error)
 	CreateBooking(ctx context.Context, in *CreateBookingRequest, opts ...grpc.CallOption) (*Void, error)
 	GetByIdBooking(ctx context.Context, in *Id, opts ...grpc.CallOption) (*Booking, error)
 	UpdateBooking(ctx context.Context, in *UpdateBookingRequest, opts ...grpc.CallOption) (*Booking, error)
@@ -42,6 +47,7 @@ type BookingServiceClient interface {
 	GetByIdReview(ctx context.Context, in *Id, opts ...grpc.CallOption) (*Review, error)
 	SearchProviders(ctx context.Context, in *SearchProvidersRequest, opts ...grpc.CallOption) (*SearchProvidersResponse, error)
 	SearchServices(ctx context.Context, in *SearchServicesRequest, opts ...grpc.CallOption) (*SearchServicesResponse, error)
+	CreateGet(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Service, error)
 }
 
 type bookingServiceClient struct {
@@ -50,6 +56,51 @@ type bookingServiceClient struct {
 
 func NewBookingServiceClient(cc grpc.ClientConnInterface) BookingServiceClient {
 	return &bookingServiceClient{cc}
+}
+
+func (c *bookingServiceClient) CreateProviders(ctx context.Context, in *CreateProvidersRequest, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/booking.BookingService/CreateProviders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bookingServiceClient) GetByIdProviders(ctx context.Context, in *Id, opts ...grpc.CallOption) (*Providers, error) {
+	out := new(Providers)
+	err := c.cc.Invoke(ctx, "/booking.BookingService/GetByIdProviders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bookingServiceClient) UpdateProviders(ctx context.Context, in *UpdateProvidersRequest, opts ...grpc.CallOption) (*Providers, error) {
+	out := new(Providers)
+	err := c.cc.Invoke(ctx, "/booking.BookingService/UpdateProviders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bookingServiceClient) DeleteProviders(ctx context.Context, in *Id, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/booking.BookingService/DeleteProviders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bookingServiceClient) GetAllProviderss(ctx context.Context, in *GetAllProvidersRequest, opts ...grpc.CallOption) (*GetAllProviderssResponse, error) {
+	out := new(GetAllProviderssResponse)
+	err := c.cc.Invoke(ctx, "/booking.BookingService/GetAllProviderss", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *bookingServiceClient) CreateBooking(ctx context.Context, in *CreateBookingRequest, opts ...grpc.CallOption) (*Void, error) {
@@ -232,10 +283,24 @@ func (c *bookingServiceClient) SearchServices(ctx context.Context, in *SearchSer
 	return out, nil
 }
 
+func (c *bookingServiceClient) CreateGet(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Service, error) {
+	out := new(Service)
+	err := c.cc.Invoke(ctx, "/booking.BookingService/CreateGet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BookingServiceServer is the server API for BookingService service.
 // All implementations must embed UnimplementedBookingServiceServer
 // for forward compatibility
 type BookingServiceServer interface {
+	CreateProviders(context.Context, *CreateProvidersRequest) (*Void, error)
+	GetByIdProviders(context.Context, *Id) (*Providers, error)
+	UpdateProviders(context.Context, *UpdateProvidersRequest) (*Providers, error)
+	DeleteProviders(context.Context, *Id) (*Void, error)
+	GetAllProviderss(context.Context, *GetAllProvidersRequest) (*GetAllProviderssResponse, error)
 	CreateBooking(context.Context, *CreateBookingRequest) (*Void, error)
 	GetByIdBooking(context.Context, *Id) (*Booking, error)
 	UpdateBooking(context.Context, *UpdateBookingRequest) (*Booking, error)
@@ -256,6 +321,7 @@ type BookingServiceServer interface {
 	GetByIdReview(context.Context, *Id) (*Review, error)
 	SearchProviders(context.Context, *SearchProvidersRequest) (*SearchProvidersResponse, error)
 	SearchServices(context.Context, *SearchServicesRequest) (*SearchServicesResponse, error)
+	CreateGet(context.Context, *Void) (*Service, error)
 	mustEmbedUnimplementedBookingServiceServer()
 }
 
@@ -263,6 +329,21 @@ type BookingServiceServer interface {
 type UnimplementedBookingServiceServer struct {
 }
 
+func (UnimplementedBookingServiceServer) CreateProviders(context.Context, *CreateProvidersRequest) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateProviders not implemented")
+}
+func (UnimplementedBookingServiceServer) GetByIdProviders(context.Context, *Id) (*Providers, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetByIdProviders not implemented")
+}
+func (UnimplementedBookingServiceServer) UpdateProviders(context.Context, *UpdateProvidersRequest) (*Providers, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateProviders not implemented")
+}
+func (UnimplementedBookingServiceServer) DeleteProviders(context.Context, *Id) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteProviders not implemented")
+}
+func (UnimplementedBookingServiceServer) GetAllProviderss(context.Context, *GetAllProvidersRequest) (*GetAllProviderssResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllProviderss not implemented")
+}
 func (UnimplementedBookingServiceServer) CreateBooking(context.Context, *CreateBookingRequest) (*Void, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateBooking not implemented")
 }
@@ -323,6 +404,9 @@ func (UnimplementedBookingServiceServer) SearchProviders(context.Context, *Searc
 func (UnimplementedBookingServiceServer) SearchServices(context.Context, *SearchServicesRequest) (*SearchServicesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchServices not implemented")
 }
+func (UnimplementedBookingServiceServer) CreateGet(context.Context, *Void) (*Service, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateGet not implemented")
+}
 func (UnimplementedBookingServiceServer) mustEmbedUnimplementedBookingServiceServer() {}
 
 // UnsafeBookingServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -334,6 +418,96 @@ type UnsafeBookingServiceServer interface {
 
 func RegisterBookingServiceServer(s grpc.ServiceRegistrar, srv BookingServiceServer) {
 	s.RegisterService(&BookingService_ServiceDesc, srv)
+}
+
+func _BookingService_CreateProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateProvidersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).CreateProviders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/booking.BookingService/CreateProviders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).CreateProviders(ctx, req.(*CreateProvidersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BookingService_GetByIdProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Id)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).GetByIdProviders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/booking.BookingService/GetByIdProviders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).GetByIdProviders(ctx, req.(*Id))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BookingService_UpdateProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateProvidersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).UpdateProviders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/booking.BookingService/UpdateProviders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).UpdateProviders(ctx, req.(*UpdateProvidersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BookingService_DeleteProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Id)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).DeleteProviders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/booking.BookingService/DeleteProviders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).DeleteProviders(ctx, req.(*Id))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BookingService_GetAllProviderss_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAllProvidersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).GetAllProviderss(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/booking.BookingService/GetAllProviderss",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).GetAllProviderss(ctx, req.(*GetAllProvidersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _BookingService_CreateBooking_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -696,6 +870,24 @@ func _BookingService_SearchServices_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BookingService_CreateGet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).CreateGet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/booking.BookingService/CreateGet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).CreateGet(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BookingService_ServiceDesc is the grpc.ServiceDesc for BookingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -703,6 +895,26 @@ var BookingService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "booking.BookingService",
 	HandlerType: (*BookingServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateProviders",
+			Handler:    _BookingService_CreateProviders_Handler,
+		},
+		{
+			MethodName: "GetByIdProviders",
+			Handler:    _BookingService_GetByIdProviders_Handler,
+		},
+		{
+			MethodName: "UpdateProviders",
+			Handler:    _BookingService_UpdateProviders_Handler,
+		},
+		{
+			MethodName: "DeleteProviders",
+			Handler:    _BookingService_DeleteProviders_Handler,
+		},
+		{
+			MethodName: "GetAllProviderss",
+			Handler:    _BookingService_GetAllProviderss_Handler,
+		},
 		{
 			MethodName: "CreateBooking",
 			Handler:    _BookingService_CreateBooking_Handler,
@@ -782,6 +994,10 @@ var BookingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SearchServices",
 			Handler:    _BookingService_SearchServices_Handler,
+		},
+		{
+			MethodName: "CreateGet",
+			Handler:    _BookingService_CreateGet_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

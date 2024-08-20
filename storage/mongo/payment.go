@@ -2,6 +2,7 @@ package mongo
 
 import (
 	pb "booking/generated/booking"
+	"booking/model"
 	"context"
 	"log/slog"
 	"time"
@@ -36,14 +37,14 @@ func (p *PaymentRepo) CreatePayment(ctx context.Context, in *pb.CreatePaymentReq
 
 	_, err := collection.InsertOne(ctx, bson.M{
 		"_id":            id,
-		"booking_id":     in.BookingId,
+		"bookingId":     in.BookingId,
 		"amount":         in.Amount,
 		"status":         in.Status,
-		"payment_method": in.PaymentMethod,
-		"transaction_id": in.TransactionId,
-		"created_at":     created_at,
-		"updated_at":     updated_at,
-		"deleted_at":     0,
+		"paymentMethod": in.PaymentMethod,
+		"transactionId": in.TransactionId,
+		"createdAt":     created_at,
+		"updatedAt":     updated_at,
+		"deletedAt":     0,
 	})
 
 	if err != nil {
@@ -56,7 +57,8 @@ func (p *PaymentRepo) CreatePayment(ctx context.Context, in *pb.CreatePaymentReq
 func (p *PaymentRepo) GetByIdPayment(ctx context.Context, id string) (*pb.Payment, error) {
 	p.Logger.Info("GetByIdPayment called with")
 	collection := p.DB.Collection("payments")
-	var payment pb.Payment
+	var payment model.Payment
+	var payments pb.Payment
 	filter := bson.M{"$and": []bson.M{
 		{"_id": id},
 		{"deleted_at": 0},
@@ -67,8 +69,16 @@ func (p *PaymentRepo) GetByIdPayment(ctx context.Context, id string) (*pb.Paymen
 		return nil, err
 	}
 
+	payments.Id = payment.Id
+	payments.BookingId = payment.BookingId
+	payments.Amount = payment.Amount
+	payments.Status = payment.Status
+	payments.PaymentMethod = payment.PaymentMethod
+	payments.TransactionId = payment.TransactionId
+	payments.CreatedAt = payment.CreatedAt
+	payments.UpdatedAt = payment.UpdatedAt
 	p.Logger.Info("Payment received successfully")
-	return &payment, nil
+	return &payments, nil
 }
 
 func (p *PaymentRepo) GetAllPayments(ctx context.Context) (*pb.GetAllPaymentsResponse, error) {
@@ -81,13 +91,22 @@ func (p *PaymentRepo) GetAllPayments(ctx context.Context) (*pb.GetAllPaymentsRes
 	}
 	var payments []*pb.Payment
 	for cur.Next(ctx) {
-		var payment pb.Payment
+		var payment model.Payment
+		var paymen pb.Payment
 		err := cur.Decode(&payment)
 		if err != nil {
 			p.Logger.Error("Failed to decode payment", err)
 			return nil, err
 		}
-		payments = append(payments, &payment)
+		paymen.Id = payment.Id
+		paymen.BookingId = payment.BookingId
+		paymen.Amount = payment.Amount
+		paymen.Status = payment.Status
+		paymen.PaymentMethod = payment.PaymentMethod
+		paymen.TransactionId = payment.TransactionId
+		paymen.CreatedAt = payment.CreatedAt
+		paymen.UpdatedAt = payment.UpdatedAt
+		payments = append(payments, &paymen)
 	}
 	return &pb.GetAllPaymentsResponse{Payments: payments}, nil
 }

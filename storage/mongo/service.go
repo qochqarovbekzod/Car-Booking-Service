@@ -2,6 +2,7 @@ package mongo
 
 import (
 	pb "booking/generated/booking"
+	"booking/model"
 	"context"
 	"log/slog"
 	"time"
@@ -58,7 +59,8 @@ func (s *ServiceRepo) UpdateServices(ctx context.Context, in *pb.UpdateServiceRe
 	s.Logger.Info("Service updated")
 	collection := s.DB.Collection("services")
 	updated_at := time.Now().Format("2006/01/02")
-	var service pb.Service
+	var services pb.Service
+	var service model.Service
 	filter := bson.M{"$and": []bson.M{
 		{"_id": in.Id},
 		{"deleted_at": 0},
@@ -80,8 +82,15 @@ func (s *ServiceRepo) UpdateServices(ctx context.Context, in *pb.UpdateServiceRe
 		s.Logger.Error("Error updating service", err)
 		return nil, err
 	}
+	services.Id = service.Id
+	services.Name = service.Name
+	services.Description = service.Description
+	services.Price = service.Price
+	services.Duration = service.Duration
+	services.CreatedAt = service.CreatedAt
+	services.UpdatedAt = service.UpdatedAt
 
-	return &service, nil
+	return &services, nil
 }
 
 func (s *ServiceRepo) DeleteServices(ctx context.Context, in *pb.Id) (*pb.Void, error) {
@@ -107,7 +116,8 @@ func (s *ServiceRepo) DeleteServices(ctx context.Context, in *pb.Id) (*pb.Void, 
 func (s *ServiceRepo) GetByIdServices(ctx context.Context, in *pb.Id) (*pb.Service, error) {
 	s.Logger.Info("GetByIdServices method called with ")
 	collection := s.DB.Collection("services")
-	var service pb.Service
+	var services pb.Service
+	var service model.Service
 	filter := bson.M{"$and": []bson.M{
 		{"_id": in.Id},
 		{"deleted_at": 0},
@@ -119,60 +129,86 @@ func (s *ServiceRepo) GetByIdServices(ctx context.Context, in *pb.Id) (*pb.Servi
 		s.Logger.Error("Error getting service by id", err)
 		return nil, err
 	}
+	services.Id = service.Id
+	services.Name = service.Name
+	services.Description = service.Description
+	services.Price = service.Price
+	services.Duration = service.Duration
+	services.CreatedAt = service.CreatedAt
+	services.UpdatedAt = service.UpdatedAt
 	s.Logger.Info("Service found")
-	return &service, nil
+	return &services, nil
 }
 
 func (s *ServiceRepo) GetAllServices(ctx context.Context, in *pb.GetAllServicesRequest) (*pb.GetAllServicesResponse, error) {
-	s.Logger.Info("GetAllServices request")
+	s.Logger.Info("GetAllServices request received")
 	collection := s.DB.Collection("services")
+	findOptions := options.Find()
+	findOptions.SetLimit(int64(in.Limit))
+	findOptions.SetSkip(int64(in.Page - 1) * int64(in.Limit)) // Corrected pagination logic
 
-	optionsFind := options.Find()
-
-	optionsFind.SetLimit(int64(in.Limit))
-	optionsFind.SetSkip(int64(in.Page))
-
-	fil := bson.D{}
+	filter := bson.M{"deleted_at": 0} // Default filter
 
 	if in.Name != "" {
-		fil = append(fil, bson.E{Key: "name", Value: in.Name})
+		filter["name"] = in.Name
 	}
 
 	if in.Description != "" {
-		fil = append(fil, bson.E{Key: "description", Value: in.Description})
+		filter["description"] = in.Description
 	}
 
 	if in.Price != 0 {
-		fil = append(fil, bson.E{Key: "price", Value: in.Price})
+		filter["price"] = in.Price
 	}
+
 	if in.Duration != 0 {
-		fil = append(fil, bson.E{Key: "duration", Value: in.Duration})
+		filter["duration"] = in.Duration
 	}
 
-	filter := bson.M{"$and": fil}
-	if len(fil) == 0 {
-        filter = bson.M{"deleted_at": 0}
-    }
+	var services []*pb.Service
 
-	cur, err := collection.Find(ctx, filter, optionsFind)
+	cur, err := collection.Find(ctx, filter, findOptions)
 	if err != nil {
 		s.Logger.Error("Error fetching services", err)
 		return nil, err
 	}
+	defer cur.Close(ctx) // Ensure cursor is closed
 
-	var services []*pb.Service
 	for cur.Next(ctx) {
-		var service pb.Service
+		var service model.Service
+		var serviceProto pb.Service
 		err := cur.Decode(&service)
 		if err != nil {
 			s.Logger.Error("Error decoding service", err)
 			return nil, err
 		}
-		services = append(services, &service)
+		serviceProto = convertToProtoService(service)
+		services = append(services, &serviceProto)
 	}
+
+	// Check for any cursor errors after iteration
+	if err := cur.Err(); err != nil {
+		s.Logger.Error("Cursor error", err)
+		return nil, err
+	}
+
+	s.Logger.Info("Services retrieved successfully")
 	return &pb.GetAllServicesResponse{
 		Services: services,
 		Limit:    in.Limit,
 		Page:     int32(in.Page),
 	}, nil
+}
+
+// Convert model.Service to pb.Service
+func convertToProtoService(service model.Service) pb.Service {
+	return pb.Service{
+		Id:          service.Id,
+		Name:        service.Name,
+		Description: service.Description,
+		Price:       service.Price,
+		Duration:    service.Duration,
+		CreatedAt:   service.CreatedAt,
+		UpdatedAt:   service.UpdatedAt,
+	}
 }

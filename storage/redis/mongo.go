@@ -1,4 +1,4 @@
-package mongo
+package redis
 
 import (
 	"context"
@@ -13,10 +13,8 @@ func ConnectMongo() (*mongo.Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Hour)
 
 	defer cancel()
-	log.Println("salodfkemdsfmiewksdvofmiosm kmdvc")
 
-	clientOPtion := options.Client().ApplyURI("mongodb://mongo:27017")
-
+	clientOPtion := options.Client().ApplyURI("mongodb://localhost:27017")
 
 	client, err := mongo.Connect(ctx, clientOPtion)
 

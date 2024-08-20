@@ -97,10 +97,18 @@ func TestGetAllServices(t *testing.T){
 
     repo := NewServiceRepo(mDB, logger)
 
-    req := pb.GetAllServicesRequest{}
+    req := pb.GetAllServicesRequest{
+    	Name:        "",
+    	Description: "",
+    	Price:       0,
+    	Duration:    0,
+    	Limit:       10,
+    	Page:        1,
+    }
 
     res, err := repo.GetAllServices(context.Background(), &req)
     fmt.Println(res)
+	t.Error(res)
     assert.NoError(t, err)
     assert.NotEmpty(t, res)
 }
